@@ -1,0 +1,36 @@
+---
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+    - 'build'
+    - '--tag=gcr.io/${PROJECT_ID}/microservices_demo/recommendationservice'
+    - '--file=./src/recommendationservice/Dockerfile'
+    - './src/recommendationservice/'
+  waitFor:
+    - '-'
+  id: recommendationservice
+- name: 'gcr.io/cloud-builders/docker'
+  args: 
+    - 'push'
+    - 'gcr.io/${PROJECT_ID}/microservices_demo/recommendationservice'
+  waitFor:
+    - recommendationservice
+  id: push
+- name: 'gcr.io/cloud-builders/gke-deploy'
+  args:
+    - 'run'
+    - '--filename=kubernetes-manifests/recommendationservice-canary.yaml'
+    - '--image=gcr.io/${PROJECT_ID}/microservices_demo/recommendationservice'
+    - '--cluster=istio-cluster'
+    - '--location=us-central1-a'
+    - '--namespace=default'
+  waitFor:
+    - recommendationservice
+    - push
+  id: deploy
+images:
+- 'gcr.io/${PROJECT_ID}/microservices_demo/recommendationservice'
+timeout: 1800s
+options:
+  machineType: N1_HIGHCPU_32
+
